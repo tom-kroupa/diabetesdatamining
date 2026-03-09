@@ -1,0 +1,58 @@
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Sora", "Segoe UI", sans-serif;
+  --color-background: #f7f3eb;
+  --color-foreground: #251f17;
+  --color-card: #fffdfa;
+  --color-card-foreground: #251f17;
+  --color-muted: #ece3d5;
+  --color-muted-foreground: #6b6257;
+  --color-primary: #155e63;
+  --color-primary-foreground: #f6fbfb;
+  --color-secondary: #e7ddd0;
+  --color-secondary-foreground: #2f2820;
+  --color-border: #d9cfbf;
+  --color-input: #d9cfbf;
+  --color-ring: #155e63;
+  --color-success: #1f6b4f;
+  --color-warning: #a65b14;
+  --color-destructive: #a33c3c;
+  --radius-sm: 0.625rem;
+  --radius-md: 0.95rem;
+  --radius-lg: 1.35rem;
+  --radius-xl: 1.6rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply min-w-[320px] bg-background font-sans text-foreground antialiased;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-primary) 22%, white);
+  }
+
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+  }
+}
