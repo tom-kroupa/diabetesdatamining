@@ -23,11 +23,11 @@ npm run dev
 npm run build
 ```
 
-## Where to paste the BigML model
+## BigML model source
 
-Open `src/lib/predict-diabetes.ts` and replace `runBigMlDecisionTree()` with the nested if/else code exported from BigML.
+The app reads the model directly from `Decision tree - code from BigML.txt` and evaluates the exported nested `if/else` tree in the browser.
 
-Keep the public helper name as `predictDiabetes(data)` so the UI stays unchanged.
+The public helper remains `predictDiabetes(data)`, so the UI stays unchanged even if you swap in a new export later.
 
 ## Project structure
 
@@ -35,7 +35,7 @@ Keep the public helper name as `predictDiabetes(data)` so the UI stays unchanged
 - `src/components/`: UI primitives and reusable form field
 - `src/data/diabetes-fields.ts`: field metadata and biological ranges
 - `src/lib/validation.ts`: parsing and input validation
-- `src/lib/predict-diabetes.ts`: decision tree integration point
+- `src/lib/predict-diabetes.ts`: parser and evaluator for the BigML decision tree export
 
 ## Deployment
 
@@ -45,4 +45,4 @@ Keep the public helper name as `predictDiabetes(data)` so the UI stays unchanged
 
 ## Note
 
-The current repository includes the full app shell and validation flow, but the actual prediction tree is still a placeholder until the BigML export is pasted in.
+The current repository includes the pasted BigML export file and evaluates that logic client-side.

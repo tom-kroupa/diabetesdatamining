@@ -1,40 +1,211 @@
+import bigMlTreeSource from '../../Decision tree - code from BigML.txt?raw'
 import type { DiabetesInput, PredictionResult } from './types'
 
-function buildBigMlInput(input: DiabetesInput) {
+type ModelField =
+  | 'glucose'
+  | 'blood_pressure'
+  | 'skinfold'
+  | 'insulin'
+  | 'bmi'
+  | 'diabetes_pedigree'
+  | 'age'
+
+type Operator = 'is-none' | '>' | '<='
+
+interface ConditionNode {
+  type: 'if'
+  condition: {
+    field: ModelField
+    operator: Operator
+    value?: number
+  }
+  children: TreeNode[]
+}
+
+interface ReturnNode {
+  type: 'return'
+  value: boolean
+}
+
+type TreeNode = ConditionNode | ReturnNode
+
+type ModelFeatures = Record<ModelField, number | null>
+
+const fieldNameMap: Record<string, ModelField> = {
+  glucose: 'glucose',
+  blood_pressure: 'blood_pressure',
+  skinfold: 'skinfold',
+  insulin: 'insulin',
+  bmi: 'bmi',
+  diabetes_pedigree: 'diabetes_pedigree',
+  age: 'age',
+}
+
+const parsedTree = parseBigMlTree(bigMlTreeSource)
+
+function buildBigMlInput(input: DiabetesInput): ModelFeatures {
   return {
     glucose: input.glucose,
-    bloodPressure: input.bloodPressure,
-    skinfoldThickness: input.skinfoldThickness,
+    blood_pressure: input.bloodPressure,
+    skinfold: input.skinfoldThickness,
     insulin: input.insulin,
     bmi: input.bmi,
-    diabetesPedigreeFunction: input.diabetesPedigreeFunction,
+    diabetes_pedigree: input.diabetesPedigreeFunction,
     age: input.age,
-    Glucose: input.glucose,
-    BloodPressure: input.bloodPressure,
-    SkinfoldThickness: input.skinfoldThickness,
-    Insulin: input.insulin,
-    BMI: input.bmi,
-    DiabetesPedigreeFunction: input.diabetesPedigreeFunction,
-    Age: input.age,
   }
 }
 
-function runBigMlDecisionTree(_features: ReturnType<typeof buildBigMlInput>): boolean {
-  void _features
+function parseBigMlTree(source: string): TreeNode[] {
+  const lines = source.replace(/\r\n/g, '\n').split('\n')
+  const root: { children: TreeNode[] } = { children: [] }
+  const stack: Array<{ indent: number; children: TreeNode[] }> = [{ indent: -1, children: root.children }]
+  let insideDocstring = false
 
-  throw new Error(
-    'BigML decision tree not configured. Replace runBigMlDecisionTree() in src/lib/predict-diabetes.ts with your exported nested if/else logic.',
-  )
+  for (const rawLine of lines) {
+    const trimmed = rawLine.trim()
 
-  /*
-  Example structure:
+    if (!trimmed) {
+      continue
+    }
 
-  if (_features.glucose > 127) {
-    return true
+    if (trimmed.startsWith('"""')) {
+      insideDocstring = !insideDocstring
+      continue
+    }
+
+    if (insideDocstring || trimmed.startsWith('def predict_diabetes')) {
+      continue
+    }
+
+    const indent = Math.floor((rawLine.match(/^ */)?.[0].length ?? 0) / 4)
+
+    while (stack.length > indent + 1) {
+      stack.pop()
+    }
+
+    if (trimmed.startsWith('if ')) {
+      const condition = parseCondition(trimmed)
+      const node: ConditionNode = {
+        type: 'if',
+        condition,
+        children: [],
+      }
+
+      stack.at(-1)?.children.push(node)
+      stack.push({ indent, children: node.children })
+      continue
+    }
+
+    if (trimmed.startsWith('return ')) {
+      stack.at(-1)?.children.push(parseReturn(trimmed))
+      continue
+    }
+
+    throw new Error(`Unsupported BigML line: ${trimmed}`)
   }
 
-  return false
-  */
+  return root.children
+}
+
+function parseCondition(line: string): ConditionNode['condition'] {
+  const match = line.match(/^if \((.+)\):$/)
+
+  if (!match) {
+    throw new Error(`Could not parse condition: ${line}`)
+  }
+
+  const expression = match[1]
+  const noneMatch = expression.match(/^([a-z_]+) is None$/)
+
+  if (noneMatch) {
+    return {
+      field: parseField(noneMatch[1]),
+      operator: 'is-none',
+    }
+  }
+
+  const numericMatch = expression.match(/^([a-z_]+) (<=|>) ([0-9.]+)$/)
+
+  if (!numericMatch) {
+    throw new Error(`Unsupported condition expression: ${expression}`)
+  }
+
+  return {
+    field: parseField(numericMatch[1]),
+    operator: numericMatch[2] as Operator,
+    value: Number(numericMatch[3]),
+  }
+}
+
+function parseField(field: string): ModelField {
+  const mappedField = fieldNameMap[field]
+
+  if (!mappedField) {
+    throw new Error(`Unsupported BigML field: ${field}`)
+  }
+
+  return mappedField
+}
+
+function parseReturn(line: string): ReturnNode {
+  if (line === "return 'true'") {
+    return { type: 'return', value: true }
+  }
+
+  if (line === "return 'false'") {
+    return { type: 'return', value: false }
+  }
+
+  throw new Error(`Unsupported return expression: ${line}`)
+}
+
+function matchesCondition(
+  condition: ConditionNode['condition'],
+  features: ModelFeatures,
+): boolean {
+  const currentValue = features[condition.field]
+
+  if (condition.operator === 'is-none') {
+    return currentValue == null
+  }
+
+  if (currentValue == null || condition.value == null) {
+    return false
+  }
+
+  if (condition.operator === '>') {
+    return currentValue > condition.value
+  }
+
+  return currentValue <= condition.value
+}
+
+function evaluateNodes(nodes: TreeNode[], features: ModelFeatures): boolean | undefined {
+  for (const node of nodes) {
+    if (node.type === 'return') {
+      return node.value
+    }
+
+    if (matchesCondition(node.condition, features)) {
+      const result = evaluateNodes(node.children, features)
+
+      if (typeof result === 'boolean') {
+        return result
+      }
+    }
+  }
+
+  return undefined
+}
+
+function runBigMlDecisionTree(features: ModelFeatures): boolean {
+  const result = evaluateNodes(parsedTree, features)
+
+  if (typeof result !== 'boolean') {
+    throw new Error('The BigML decision tree did not produce a final prediction.')
+  }
+
+  return result
 }
 
 export function predictDiabetes(input: DiabetesInput): PredictionResult {
@@ -46,7 +217,7 @@ export function predictDiabetes(input: DiabetesInput): PredictionResult {
         status: 'positive',
         headline: 'High Probability of Diabetes Detected',
         detail:
-          'The current decision tree classified this profile as likely positive. Review the metrics carefully and follow up with a qualified clinician for real assessment.',
+          'The BigML decision tree classified this profile as likely positive. Review the metrics carefully and follow up with a qualified clinician for actual diagnosis.',
         note: 'This is a machine learning demo and not medical advice.',
       }
     }
@@ -55,21 +226,21 @@ export function predictDiabetes(input: DiabetesInput): PredictionResult {
       status: 'negative',
       headline: 'Low Probability of Diabetes Detected',
       detail:
-        'The current decision tree classified this profile as lower risk in this demo. A low-probability result does not rule out diabetes or replace medical screening.',
+        'The BigML decision tree classified this profile as lower risk in this demo. A low-probability result does not rule out diabetes or replace medical screening.',
       note: 'This is a machine learning demo and not medical advice.',
     }
   } catch (error) {
     return {
       status: 'unavailable',
-      headline: 'Model Logic Needed',
+      headline: 'Model Could Not Run',
       detail:
         error instanceof Error
           ? error.message
-          : 'The BigML decision tree is missing. Paste the exported logic into src/lib/predict-diabetes.ts.',
+          : 'The BigML decision tree could not be evaluated from the pasted export file.',
       note: 'This is a machine learning demo and not medical advice.',
     }
   }
 }
 
 export const bigMlIntegrationHint =
-  'Open src/lib/predict-diabetes.ts and replace runBigMlDecisionTree() with your exported BigML nested if/else logic.'
+  'The predictor is loaded from Decision tree - code from BigML.txt and evaluated in the browser.'

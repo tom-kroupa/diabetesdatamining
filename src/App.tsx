@@ -209,10 +209,9 @@ function App() {
 
             <Card className="border-white/70 bg-white/80 shadow-[0_22px_70px_rgba(120,92,47,0.1)] backdrop-blur">
               <CardHeader className="p-7 sm:p-9">
-                <CardTitle className="text-2xl">Model Integration</CardTitle>
+                <CardTitle className="text-2xl">Model Source</CardTitle>
                 <CardDescription>
-                  The application shell is complete. The actual classifier still needs your exported
-                  BigML tree.
+                  The classifier now reads the pasted BigML export file directly and evaluates it in the browser.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 p-7 pt-0 sm:p-9 sm:pt-0">
@@ -220,10 +219,8 @@ function App() {
                   <p className="font-mono text-sm text-foreground">{bigMlIntegrationHint}</p>
                 </div>
                 <ul className="space-y-3 text-sm leading-6 text-muted-foreground">
-                  <li>Paste the nested if/else export into the prediction helper.</li>
-                  <li>
-                    Keep the helper name as <span className="font-mono text-foreground">predictDiabetes(data)</span>.
-                  </li>
+                  <li>Update the root text file whenever you export a new BigML tree.</li>
+                  <li>The UI still calls the same helper: <span className="font-mono text-foreground">predictDiabetes(data)</span>.</li>
                   <li>Deploy through GitHub, then connect the repo to Vercel or Netlify.</li>
                 </ul>
               </CardContent>
