@@ -39,9 +39,26 @@ The public helper remains `predictDiabetes(data)`, so the UI stays unchanged eve
 
 ## Deployment
 
-1. Push the repository to GitHub.
-2. Import the repository into Vercel or Netlify.
-3. Redeploy automatically on each push.
+### GitHub Pages
+
+This repository now includes `.github/workflows/deploy.yml` for automatic GitHub Pages deployment.
+
+1. Open the repository on GitHub.
+2. Go to `Settings -> Pages`.
+3. Under `Build and deployment`, set `Source` to `GitHub Actions`.
+4. Push to `main` and GitHub will build and publish the `dist` folder automatically.
+
+Your Pages URL should be:
+
+`https://tom-kroupa.github.io/diabetesdatamining/`
+
+### Vercel or Netlify
+
+If you prefer a simpler UI and automatic preview URLs on every push:
+
+1. Import the GitHub repository into Vercel or Netlify.
+2. Keep the default Vite build settings (`npm run build`, output `dist`).
+3. Each new push to GitHub will trigger a deployment automatically.
 
 ## Note
 
