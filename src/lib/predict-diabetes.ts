@@ -41,7 +41,7 @@ const fieldNameMap: Record<string, ModelField> = {
   age: 'age',
 }
 
-const parsedTree = parseBigMlTree(bigMlTreeSource)
+let parsedTreeCache: TreeNode[] | null = null
 
 function buildBigMlInput(input: DiabetesInput): ModelFeatures {
   return {
@@ -60,6 +60,8 @@ function parseBigMlTree(source: string): TreeNode[] {
   const root: { children: TreeNode[] } = { children: [] }
   const stack: Array<{ indent: number; children: TreeNode[] }> = [{ indent: -1, children: root.children }]
   let insideDocstring = false
+  let insideSignature = false
+  let baseIndent: number | null = null
 
   for (const rawLine of lines) {
     const trimmed = rawLine.trim()
@@ -73,11 +75,29 @@ function parseBigMlTree(source: string): TreeNode[] {
       continue
     }
 
-    if (insideDocstring || trimmed.startsWith('def predict_diabetes')) {
+    if (trimmed.startsWith('def predict_diabetes')) {
+      insideSignature = !trimmed.endsWith('):')
       continue
     }
 
-    const indent = Math.floor((rawLine.match(/^ */)?.[0].length ?? 0) / 4)
+    if (insideSignature) {
+      if (trimmed.endsWith('):')) {
+        insideSignature = false
+      }
+      continue
+    }
+
+    if (insideDocstring) {
+      continue
+    }
+
+    const rawIndent = Math.floor((rawLine.match(/^ */)?.[0].length ?? 0) / 4)
+
+    if (baseIndent == null) {
+      baseIndent = rawIndent
+    }
+
+    const indent = rawIndent - baseIndent
 
     while (stack.length > indent + 1) {
       stack.pop()
@@ -105,6 +125,14 @@ function parseBigMlTree(source: string): TreeNode[] {
   }
 
   return root.children
+}
+
+function getParsedTree(): TreeNode[] {
+  if (!parsedTreeCache) {
+    parsedTreeCache = parseBigMlTree(bigMlTreeSource)
+  }
+
+  return parsedTreeCache
 }
 
 function parseCondition(line: string): ConditionNode['condition'] {
@@ -199,7 +227,7 @@ function evaluateNodes(nodes: TreeNode[], features: ModelFeatures): boolean | un
 }
 
 function runBigMlDecisionTree(features: ModelFeatures): boolean {
-  const result = evaluateNodes(parsedTree, features)
+  const result = evaluateNodes(getParsedTree(), features)
 
   if (typeof result !== 'boolean') {
     throw new Error('The BigML decision tree did not produce a final prediction.')
